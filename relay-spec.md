@@ -28,6 +28,47 @@ This document compares the behavior of the `limit` filter parameter across diffe
 | haven (khatru-based) | No limit | Not configured | Returns all matching events via eventstore |
 | wot-relay (khatru-based) | No limit | Not configured | Returns all matching events via eventstore |
 
+
+## Time-based Restrictions
+
+### Event Submission Time Validation
+
+This table shows how relays validate the `created_at` timestamp when clients submit new events.
+
+| Relay | Max Future Offset | Max Past Offset | Notes |
+|-------|------------------|-----------------|-------|
+| strfry | +900s (15 min) | -94,608,000s (~3 years) | Rejects events outside this range |
+| nostream | +900s (15 min) | No limit | Only future events rejected |
+| nostr-rs-relay | +1,800s (30 min) | No limit | Only future events rejected |
+| khatru | Not enforced | Not enforced | Framework doesn't enforce by default |
+| haven | Not enforced | Not enforced | Inherits khatru behavior |
+| wot-relay | Not enforced | Not enforced | Inherits khatru behavior |
+
+**Purpose of time validation:**
+- **Future offset limit**: Prevents clients from creating events with timestamps too far in the future
+- **Past offset limit**: Prevents backdate attacks where malicious users create events with very old timestamps
+
+### Event Storage/Deletion Policies
+
+This table shows how relays manage stored events over time.
+
+| Relay | Ephemeral Event Age | Ephemeral Event Lifetime | Regular Event Max Age | Notes |
+|-------|---------------------|--------------------------|----------------------|-------|
+| strfry | Reject if >60s old | Auto-delete after 300s | - | Kind 20000-29999 only |
+| nostream | - | - | - | No automatic deletion |
+| nostr-rs-relay | - | - | - | No automatic deletion |
+| khatru | - | - | - | Implementation-dependent |
+| haven | - | - | - | No automatic deletion |
+| wot-relay | - | - | Delete after 365 days | Configurable via MAX_AGE_DAYS |
+
+**Key differences:**
+- **Ephemeral events** (kind 20000-29999): Temporary events not expected to be stored long-term
+- **Regular events**: Standard events that relays typically store indefinitely
+- **Auto-deletion**: Some relays automatically remove old events to manage storage
+
+---
+
+
 ## Detailed Analysis
 
 ### 1. strfry (C++)
@@ -303,44 +344,6 @@ MAX_AGE_DAYS=365
 
 ---
 
-## Time-based Restrictions
-
-### Event Submission Time Validation
-
-This table shows how relays validate the `created_at` timestamp when clients submit new events.
-
-| Relay | Max Future Offset | Max Past Offset | Notes |
-|-------|------------------|-----------------|-------|
-| strfry | +900s (15 min) | -94,608,000s (~3 years) | Rejects events outside this range |
-| nostream | +900s (15 min) | No limit | Only future events rejected |
-| nostr-rs-relay | +1,800s (30 min) | No limit | Only future events rejected |
-| khatru | Not enforced | Not enforced | Framework doesn't enforce by default |
-| haven | Not enforced | Not enforced | Inherits khatru behavior |
-| wot-relay | Not enforced | Not enforced | Inherits khatru behavior |
-
-**Purpose of time validation:**
-- **Future offset limit**: Prevents clients from creating events with timestamps too far in the future
-- **Past offset limit**: Prevents backdate attacks where malicious users create events with very old timestamps
-
-### Event Storage/Deletion Policies
-
-This table shows how relays manage stored events over time.
-
-| Relay | Ephemeral Event Age | Ephemeral Event Lifetime | Regular Event Max Age | Notes |
-|-------|---------------------|--------------------------|----------------------|-------|
-| strfry | Reject if >60s old | Auto-delete after 300s | - | Kind 20000-29999 only |
-| nostream | - | - | - | No automatic deletion |
-| nostr-rs-relay | - | - | - | No automatic deletion |
-| khatru | - | - | - | Implementation-dependent |
-| haven | - | - | - | No automatic deletion |
-| wot-relay | - | - | Delete after 365 days | Configurable via MAX_AGE_DAYS |
-
-**Key differences:**
-- **Ephemeral events** (kind 20000-29999): Temporary events not expected to be stored long-term
-- **Regular events**: Standard events that relays typically store indefinitely
-- **Auto-deletion**: Some relays automatically remove old events to manage storage
-
----
 
 ## References
 
