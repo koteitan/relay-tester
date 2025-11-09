@@ -21,13 +21,40 @@ This document compares the behavior of the `limit` filter parameter across diffe
 
 | Relay Implementation | Default Max Limit | Config Parameter | Behavior |
 |---------------------|-------------------|------------------|----------|
-| strfry | 500 | `relay.maxFilterLimit` | Returns min(client_limit, 500) events per filter |
-| nostream | 5000 | `limits.client.subscription.maxLimit` | Returns min(client_limit, 5000) events per subscription |
+| strfry | [500](https://github.com/hoytech/strfry/blob/542552ab/strfry.conf#L91) | `relay.maxFilterLimit` | Returns min(client_limit, 500) events per filter |
+| nostream | [5000](https://github.com/cameri/nostream/blob/6a8ccb49/resources/default-settings.yaml#L162) | `limits.client.subscription.maxLimit` | Returns min(client_limit, 5000) events per subscription |
 | nostr-rs-relay | No explicit limit | Not found in default config | Returns all matching events when limit not specified |
 | khatru (framework) | No default limit | Not applicable | Implementation-dependent, no built-in max limit |
 | haven (khatru-based) | No limit | Not configured | Returns all matching events via eventstore |
 | wot-relay (khatru-based) | No limit | Not configured | Returns all matching events via eventstore |
 
+## Rate Limiting
+
+This table shows the rate limits each relay enforces on client requests.
+
+| Relay | Type | Event Submission Rate | Filter/REQ Rate | Connection Rate | Notes |
+|-------|------|----------------------|-----------------|-----------------|-------|
+| strfry | - | Not configured by default | Not configured | Not configured | All limits are configurable |
+| nostream | Kind [0](https://github.com/nostr-protocol/nips/blob/master/01.md),[3](https://github.com/nostr-protocol/nips/blob/master/02.md),[40](https://github.com/nostr-protocol/nips/blob/master/28.md),[41](https://github.com/nostr-protocol/nips/blob/master/28.md) | [6 events/min](https://github.com/cameri/nostream/blob/6a8ccb49/resources/default-settings.yaml#L108-L115) | [240 msg/min](https://github.com/cameri/nostream/blob/6a8ccb49/resources/default-settings.yaml#L168) | [12/sec](https://github.com/cameri/nostream/blob/6a8ccb49/resources/default-settings.yaml#L71) and [48/min](https://github.com/cameri/nostream/blob/6a8ccb49/resources/default-settings.yaml#L73) | Metadata, contacts, channel events |
+| nostream | Kind [1](https://github.com/nostr-protocol/nips/blob/master/01.md),[2](https://github.com/nostr-protocol/nips/blob/master/01.md),[4](https://github.com/nostr-protocol/nips/blob/master/04.md),[42](https://github.com/nostr-protocol/nips/blob/master/28.md) | [12 events/min](https://github.com/cameri/nostream/blob/6a8ccb49/resources/default-settings.yaml#L116-L123) | [240 msg/min](https://github.com/cameri/nostream/blob/6a8ccb49/resources/default-settings.yaml#L168) | [12/sec](https://github.com/cameri/nostream/blob/6a8ccb49/resources/default-settings.yaml#L71) and [48/min](https://github.com/cameri/nostream/blob/6a8ccb49/resources/default-settings.yaml#L73) | Notes, DMs, channel messages |
+| nostream | Kind [5](https://github.com/nostr-protocol/nips/blob/master/09.md)-[7](https://github.com/nostr-protocol/nips/blob/master/25.md),[43](https://github.com/nostr-protocol/nips/blob/master/28.md)-[49](https://github.com/nostr-protocol/nips/blob/master/49.md) | [30 events/min](https://github.com/cameri/nostream/blob/6a8ccb49/resources/default-settings.yaml#L124-L131) | [240 msg/min](https://github.com/cameri/nostream/blob/6a8ccb49/resources/default-settings.yaml#L168) | [12/sec](https://github.com/cameri/nostream/blob/6a8ccb49/resources/default-settings.yaml#L71) and [48/min](https://github.com/cameri/nostream/blob/6a8ccb49/resources/default-settings.yaml#L73) | Deletions, reactions, channel events |
+| nostream | Kind [10000-19999,30000-39999](https://github.com/nostr-protocol/nips/blob/master/01.md) | [24 events/min](https://github.com/cameri/nostream/blob/6a8ccb49/resources/default-settings.yaml#L132-L141) | [240 msg/min](https://github.com/cameri/nostream/blob/6a8ccb49/resources/default-settings.yaml#L168) | [12/sec](https://github.com/cameri/nostream/blob/6a8ccb49/resources/default-settings.yaml#L71) and [48/min](https://github.com/cameri/nostream/blob/6a8ccb49/resources/default-settings.yaml#L73) | Replaceable events |
+| nostream | Kind [20000-29999](https://github.com/nostr-protocol/nips/blob/master/01.md) | [60 events/min](https://github.com/cameri/nostream/blob/6a8ccb49/resources/default-settings.yaml#L142-L147) | [240 msg/min](https://github.com/cameri/nostream/blob/6a8ccb49/resources/default-settings.yaml#L168) | [12/sec](https://github.com/cameri/nostream/blob/6a8ccb49/resources/default-settings.yaml#L71) and [48/min](https://github.com/cameri/nostream/blob/6a8ccb49/resources/default-settings.yaml#L73) | Ephemeral events |
+| nostream | All events | [720 events/hour](https://github.com/cameri/nostream/blob/6a8ccb49/resources/default-settings.yaml#L148-L150) overall limit | [240 msg/min](https://github.com/cameri/nostream/blob/6a8ccb49/resources/default-settings.yaml#L168) | [12/sec](https://github.com/cameri/nostream/blob/6a8ccb49/resources/default-settings.yaml#L71) and [48/min](https://github.com/cameri/nostream/blob/6a8ccb49/resources/default-settings.yaml#L73) | Combined across all kinds |
+| nostr-rs-relay | - | Configurable (default: unlimited) | Configurable (default: unlimited) | Not configured | Optional: [messages_per_sec](https://git.sr.ht/~gheartsfield/nostr-rs-relay/tree/d72af96d/item/config.toml#L115), [subscriptions_per_min](https://git.sr.ht/~gheartsfield/nostr-rs-relay/tree/d72af96d/item/config.toml#L121) |
+| khatru | - | [2 events/3min](https://github.com/fiatjaf/khatru/blob/9f99b982/policies/sane_defaults.go#L12) (max 10 tokens) | [20 filters/min](https://github.com/fiatjaf/khatru/blob/9f99b982/policies/sane_defaults.go#L17) (max 100 tokens) | [1 conn/5min](https://github.com/fiatjaf/khatru/blob/9f99b982/policies/sane_defaults.go#L21) (max 100 tokens) | Framework. Via [`ApplySaneDefaults`](https://github.com/fiatjaf/khatru/blob/9f99b982/policies/sane_defaults.go#L9) |
+| haven | Private | [50 events/min](https://github.com/bitvora/haven/blob/81781b36/limits.go#L61) (max 100 tokens) | Not separately configured | [3 conn/5min](https://github.com/bitvora/haven/blob/81781b36/limits.go#L66) | Khatru-based |
+| haven | Chat | [50 events/min](https://github.com/bitvora/haven/blob/81781b36/limits.go#L72) (max 100 tokens) | Not separately configured | [3 conn/3min](https://github.com/bitvora/haven/blob/81781b36/limits.go#L77) | Khatru-based |
+| haven | Inbox | [10 events/min](https://github.com/bitvora/haven/blob/81781b36/limits.go#L83) (max 20 tokens) | Not separately configured | [3 conn/min](https://github.com/bitvora/haven/blob/81781b36/limits.go#L88) | Khatru-based |
+| haven | Outbox | [10 events/60min](https://github.com/bitvora/haven/blob/81781b36/limits.go#L94) (max 100 tokens) | Not separately configured | [3 conn/min](https://github.com/bitvora/haven/blob/81781b36/limits.go#L99) | Khatru-based |
+| wot-relay | - | [5 events/min](https://github.com/bitvora/wot-relay/blob/24b51de9/main.go#L131) (max 30 tokens) | [5 filters/min](https://github.com/bitvora/wot-relay/blob/24b51de9/main.go#L137) (max 30 tokens) | [10 conn/2min](https://github.com/bitvora/wot-relay/blob/24b51de9/main.go#L141) (max 30 tokens) | Khatru-based. Stricter than khatru defaults |
+
+**Important notes:**
+- **Token bucket algorithm**: Most relays use token bucket rate limiting where tokens refill over time
+- **Rate limits ≠ Result limits**: Rate limits control request frequency, not the number of events returned per request
+- **Per-IP vs Per-Connection**: Most implementations apply limits per IP address
+
+---
 
 ## Time-based Restrictions
 
@@ -37,9 +64,9 @@ This table shows how relays validate the `created_at` timestamp when clients sub
 
 | Relay | Max Future Offset | Max Past Offset | Notes |
 |-------|------------------|-----------------|-------|
-| strfry | +900s (15 min) | -94,608,000s (~3 years) | Rejects events outside this range |
-| nostream | +900s (15 min) | No limit | Only future events rejected |
-| nostr-rs-relay | +1,800s (30 min) | No limit | Only future events rejected |
+| strfry | [+900s (15 min)](https://github.com/hoytech/strfry/blob/542552ab/strfry.conf#L24) | [-94,608,000s (~3 years)](https://github.com/hoytech/strfry/blob/542552ab/strfry.conf#L27) | Rejects events outside this range |
+| nostream | [+900s (15 min)](https://github.com/cameri/nostream/blob/6a8ccb49/resources/default-settings.yaml#L90) | No limit | Only future events rejected |
+| nostr-rs-relay | [+1,800s (30 min)](https://git.sr.ht/~gheartsfield/nostr-rs-relay/tree/d72af96d/item/config.toml#L105) | No limit | Only future events rejected |
 | khatru | Not enforced | Not enforced | Framework doesn't enforce by default |
 | haven | Not enforced | Not enforced | Inherits khatru behavior |
 | wot-relay | Not enforced | Not enforced | Inherits khatru behavior |
@@ -54,12 +81,12 @@ This table shows how relays manage stored events over time.
 
 | Relay | Ephemeral Event Age | Ephemeral Event Lifetime | Regular Event Max Age | Notes |
 |-------|---------------------|--------------------------|----------------------|-------|
-| strfry | Reject if >60s old | Auto-delete after 300s | - | Kind 20000-29999 only |
+| strfry | Reject if [>60s](https://github.com/hoytech/strfry/blob/542552ab/strfry.conf#L30) old | Auto-delete after [300s](https://github.com/hoytech/strfry/blob/542552ab/strfry.conf#L33) | - | Kind 20000-29999 only |
 | nostream | - | - | - | No automatic deletion |
 | nostr-rs-relay | - | - | - | No automatic deletion |
 | khatru | - | - | - | Implementation-dependent |
 | haven | - | - | - | No automatic deletion |
-| wot-relay | - | - | Delete after 365 days | Configurable via MAX_AGE_DAYS |
+| wot-relay | - | - | Delete after [365 days](https://github.com/bitvora/wot-relay/blob/24b51de9/.env.example#L27) | Configurable via MAX_AGE_DAYS |
 
 **Key differences:**
 - **Ephemeral events** (kind 20000-29999): Temporary events not expected to be stored long-term
@@ -360,12 +387,12 @@ MAX_AGE_DAYS=365
 
 ## Version Information
 
-**Document Version:** 1.2
+**Document Version:** 1.3
 **Date Checked:** 2025-11-10
 **Relay Versions Analyzed:**
 - strfry: `542552ab0f5234f808c52c21772b34f6f07bec65` (2025-01-10)
 - nostream: `6a8ccb491973b2470e3b332bef61ed7ea1143091` (2024-10-23)
 - nostr-rs-relay: `d72af96d5f884e916cd3374dddd5550f8a45bfaf` (2025-02-23)
 - khatru: `9f99b9827a6e030bbcefc48f7af68bfe7eea1a27` (2025-09-22)
-- haven: `9f99b9827a6e030bbcefc48f7af68bfe7eea1a27` (2025-09-22)
-- wot-relay: `9f99b9827a6e030bbcefc48f7af68bfe7eea1a27` (2025-09-22)
+- haven: `81781b36aaafe5895bb612a452b7c0f44cde6e67` (2025-10-26)
+- wot-relay: `24b51de9fdd8631f4795be85983666e76f220960` (2025-06-16)
