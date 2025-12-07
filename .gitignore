@@ -1,1 +1,3 @@
 claude-doc/
+*.log
+commit-msg.txt

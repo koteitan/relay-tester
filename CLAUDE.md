@@ -25,7 +25,7 @@
 - index.html: main UI.
 - main.js: main logic.
 - style.css: main stylesheet.
-
+- commit-msg.txt: commit message suggestion.
 - claude-doc/\* is the directory for you. Don't include it to git.
 - CLAUDE.md: The rules for you.
 
