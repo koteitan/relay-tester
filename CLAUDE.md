@@ -5,7 +5,7 @@
 
 # git rules
 - git add/commit/push only if I ask you to do so.
-- don't git restore/checkout/revert.
+- don't git restore/checkout/revert/add -A.
 - commit messages is in the following format:
 ```[short description]
 [empty line]
@@ -28,3 +28,4 @@
 
 - claude-doc/\* is the directory for you. Don't include it to git.
 - CLAUDE.md: The rules for you.
+
